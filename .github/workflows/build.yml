@@ -1,0 +1,47 @@
+name: build image
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write # WIF용 OIDC 토큰 발급에 필요하다. 없으면 인증 단계에서 막힌다.
+
+env:
+  IMAGE: asia-northeast3-docker.pkg.dev/project-625c295b-8fc2-4330-b43/dev-images/airflow
+  AIRFLOW_VERSION: "3.2.2"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # 서비스 계정 키 없이 인증한다. GCP가 이 레포의 OIDC 토큰을 검증하고 단기 토큰을 내준다.
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: projects/970571687710/locations/global/workloadIdentityPools/github/providers/github
+          service_account: dev-image-builder@project-625c295b-8fc2-4330-b43.iam.gserviceaccount.com
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - run: gcloud auth configure-docker asia-northeast3-docker.pkg.dev --quiet
+
+      - id: tag
+        run: echo "value=${AIRFLOW_VERSION}-${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/setup-buildx-action@v3
+
+      # GKE 노드가 amd64다. 플랫폼을 지정하지 않으면 러너 아키텍처를 따라가 배포 때 터진다.
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64
+          push: true
+          tags: ${{ env.IMAGE }}:${{ steps.tag.outputs.value }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - run: echo "pushed ${IMAGE}:${{ steps.tag.outputs.value }}" >> "$GITHUB_STEP_SUMMARY"
