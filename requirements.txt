@@ -1,5 +1,5 @@
 # 설치가 아니라 고정 조건. 이미 base 이미지에 있고, cosmos가 airflow 버전을 바꾸지 못하게 막는다.
 # Dockerfile의 FROM 태그와 맞춘다 (어긋나면 빌드가 실패한다).
 apache-airflow==3.2.2
-dbt-bigquery==1.12.1
+dbt-bigquery==1.12.3
 astronomer-cosmos==1.15.1
