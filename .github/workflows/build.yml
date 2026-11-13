@@ -7,10 +7,10 @@ on:
 
 permissions:
   contents: read
-  id-token: write # WIF용 OIDC 토큰 발급에 필요하다. 없으면 인증 단계에서 막힌다.
+  packages: write # 내장 GITHUB_TOKEN으로 GHCR에 push한다. PAT나 클라우드 자격증명이 필요 없다.
 
 env:
-  IMAGE: asia-northeast3-docker.pkg.dev/project-625c295b-8fc2-4330-b43/dev-images/airflow
+  IMAGE: ghcr.io/${{ github.repository }}
   AIRFLOW_VERSION: "3.2.2"
 
 jobs:
@@ -19,15 +19,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # 서비스 계정 키 없이 인증한다. GCP가 이 레포의 OIDC 토큰을 검증하고 단기 토큰을 내준다.
-      - uses: google-github-actions/auth@v2
+      - uses: docker/login-action@v3
         with:
-          workload_identity_provider: projects/970571687710/locations/global/workloadIdentityPools/github/providers/github
-          service_account: dev-image-builder@project-625c295b-8fc2-4330-b43.iam.gserviceaccount.com
-
-      - uses: google-github-actions/setup-gcloud@v2
-
-      - run: gcloud auth configure-docker asia-northeast3-docker.pkg.dev --quiet
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - id: tag
         run: echo "value=${AIRFLOW_VERSION}-${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
