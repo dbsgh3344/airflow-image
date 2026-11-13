@@ -3,6 +3,7 @@
 FROM apache/airflow:3.2.2
 
 # airflow 이미지는 airflow 사용자로 설치해야 한다 (root로 깔면 PATH에서 못 찾는다).
-RUN pip install --no-cache-dir \
-      dbt-bigquery \
-      astronomer-cosmos
+# uv는 공식 이미지에 들어 있고 VIRTUAL_ENV(~/.local)가 잡혀 있어 pip와 같은 곳에 깔린다.
+# 최상위만 고정한다. 하위까지 lock하면 base 이미지의 airflow 의존성과 부딪힌다.
+COPY requirements.txt /tmp/requirements.txt
+RUN uv pip install --no-cache -r /tmp/requirements.txt
